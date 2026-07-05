@@ -1,0 +1,70 @@
+name: Asterra SaaS App Continuous Integration & Deployment
+
+on:
+  push:
+    branches:
+      - main # הפעלה אוטומטית בעת ביצוע Merge לענף הראשי בלבד
+
+permissions:
+  contents: write # מעניק לפייפליין הרשאות ליצור ולדחוף תגיות גרסה
+
+jobs:
+  ci_cd_pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        persist-credentials: true # קריטי! שומר על פרטי הגישה ומאפשר לבצע git push בהמשך
+
+    - name: Run Code Syntax Compilation Test
+      run: |
+        python3 -m py_compile app/app.py
+
+    - name: Configure AWS Management Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Authenticate to Amazon ECR Registry
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Calculate Next Version Tag
+      id: versioning
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # שימוש בטוקן המובנה לצורך אימות מאובטח של הבוט
+      run: |
+        # שליפת הטאג האחרון או הגדרת גרסת בסיס
+        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+        VERSION_BASE=$(echo $LATEST_TAG | sed 's/v//')
+        IFS='.' read -r major minor patch <<< "$VERSION_BASE"
+        NEW_PATCH=$((patch + 1))
+        NEW_TAG="v$major.$minor.$NEW_PATCH"
+        
+        echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+        
+        # הגדרת זהות הבוט
+        git config --global user.name "asterra-cicd-bot"
+        git config --global user.email "cicd-bot@asterra.io"
+        
+        # יצירת הטאג המקומי
+        git tag $NEW_TAG
+        
+        # דחיפה מאובטחת באמצעות הטוקן של GitHub כדי למנוע בעיות הרשאות (Permission Denied)
+        git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@://github.com{{ github.repository }}.git $NEW_TAG || true
+
+    - name: Compile and Push Docker Image to ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: asterra-saas-app
+        IMAGE_TAG: ${{ steps.versioning.outputs.new_tag }}
+      run: |
+        cd app
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
