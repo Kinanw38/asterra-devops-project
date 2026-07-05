@@ -21,6 +21,7 @@ graph TD
             subgraph Private_Subnets ["🔒 Private Subnets"]
                 PW["🖥️ Private Workspace A.2"]
                 SaaS["⚙️ SaaS Ingestion Engine"]
+                RDS[("🐘 RDS PostgreSQL + PostGIS")]
             end
         end
 
@@ -37,7 +38,8 @@ graph TD
     WP --> S3_Pub
     NAT --> PW
     S3_Priv --> SaaS
-    SaaS --> PW
+    SaaS --> RDS
+    PW -.-> RDS
 ```
 
 ### 🧱 Core Components
