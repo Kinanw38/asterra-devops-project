@@ -33,7 +33,7 @@ resource "aws_db_instance" "postgres" {
   allocated_storage      = 20 # הניפוח המינימלי הנדרש להרצה במסגרת ה-Free Tier
   max_allocated_storage  = 20
   engine                 = "postgres"
-  engine_version         = "15.4" # גרסה יציבה ומומלצת התומכת באופן מובנה בהרחבות גיאוגרפיות (PostGIS)
+  engine_version         = "15" # גרסה יציבה ומומלצת התומכת באופן מובנה בהרחבות גיאוגרפיות (PostGIS)
   instance_class         = "db.t3.micro" # שימוש באינסטנס החינמי הזמין ביותר
   db_name                = "asterrageodb"
   username               = "asterra_admin"
