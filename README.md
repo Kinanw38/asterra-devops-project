@@ -11,11 +11,11 @@ graph TD
     %% Nodes Definition inside Subgraphs
     subgraph AWS_Cloud ["☁️ AWS Cloud (us-east-1)"]
         IGW["🌐 Internet Gateway"]
-        NAT["🔌 NAT Gateway"]
         
         subgraph VPC_Env ["🛡️ VPC (10.0.0.0/16)"]
             subgraph Public_Subnets ["🔓 Public Subnets"]
                 WP["📝 WordPress Server A.1"]
+                NAT["🔌 NAT Gateway"]
             end
             
             subgraph Private_Subnets ["🔒 Private Subnets"]
@@ -36,7 +36,12 @@ graph TD
     USR --> IGW
     IGW --> WP
     WP --> S3_Pub
-    NAT --> PW
+    
+    %% Outbound Private Traffic via NAT (The Correct DevOps Flow)
+    PW --> NAT
+    NAT --> IGW
+    
+    %% Ingestion & DB Flow
     S3_Priv --> SaaS
     SaaS --> RDS
     PW -.-> RDS
