@@ -29,7 +29,7 @@ resource "aws_iam_role" "app_role" {
       {
         Action    = "sts:AssumeRole"
         Effect    = "Allow"
-        Principal = { Service = "://amazonaws.com" }
+        Principal = { Service = "ec2.amazonaws.com" }
       }
     ]
   })
