@@ -24,6 +24,11 @@ terraform destroy \
     -var="allowed_rdp_ip=0.0.0.0/0" \
     -auto-approve
 
+echo "[STEP] Forcefully removing the Terraform State S3 bucket..."
+if aws s3api head-bucket --bucket "$IAC_STATE_BUCKET" --region "$REGION" 2>/dev/null; then
+    aws s3 rb "s3://$IAC_STATE_BUCKET" --force --region "$REGION"
+fi
+
 echo "========================================================="
 echo "🧹 CLEANUP FINALIZED! All allocated cloud resources have been completely removed."
 echo "========================================================="
