@@ -28,7 +28,7 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
+        aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }} # דינמי! מתאים לדרישת השינויים הגיאוגרפיים
 
     - name: Authenticate to Amazon ECR Registry
       id: login-ecr
@@ -37,7 +37,7 @@ jobs:
     - name: Calculate Next Version Tag
       id: versioning
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # שימוש בטוקן המובנה לצורך אימות מאובטח של הבוט
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         # שליפת הטאג האחרון או הגדרת גרסת בסיס
         LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
@@ -55,8 +55,8 @@ jobs:
         # יצירת הטאג המקומי
         git tag $NEW_TAG
         
-        # דחיפה מאובטחת באמצעות הטוקן של GitHub כדי למנוע בעיות הרשאות (Permission Denied)
-        git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@://github.com{{ github.repository }}.git $NEW_TAG || true
+        # תיקונן כתובת ה-URL לדחיפת הטאג חזרה ל-GitHub
+        git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git $NEW_TAG
 
     - name: Compile and Push Docker Image to ECR
       env:
