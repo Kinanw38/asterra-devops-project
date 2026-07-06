@@ -145,6 +145,10 @@ resource "aws_instance" "gis_private" {
               docker run -d \
                 --name asterra-saas-container \
                 --restart always \
+                --log-driver=awslogs \
+                --log-opt awslogs-group=/asterra/saas-engine-logs \
+                --log-opt awslogs-create-group=true \
+                --log-opt awslogs-region="${var.aws_region}" \
                 -e INGEST_BUCKET_NAME="${aws_s3_bucket.ingest.id}" \
                 -e DB_ENDPOINT="${aws_db_instance.postgres.endpoint}" \
                 -e SECRET_NAME="${aws_secretsmanager_secret.db_secret.id}" \
