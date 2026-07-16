@@ -22,6 +22,8 @@ terraform destroy \
     -var="aws_region=$REGION" \
     -var="environment=$ENVIRONMENT" \
     -var="allowed_rdp_ip=0.0.0.0/0" \
+    -var="rdp_password=destroy_dummy_password" \
+    -var="wp_db_password=destroy_dummy_password" \
     -auto-approve
 
 echo "[STEP] Forcefully removing the Terraform State S3 bucket..."
