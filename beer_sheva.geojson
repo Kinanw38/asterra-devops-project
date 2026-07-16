@@ -1,0 +1,28 @@
+cat << 'EOF' > beer_sheva.geojson
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Beer Sheva Downtown & Old City Area",
+        "description": "Valid GeoJSON boundary representing Beer Sheva city center for GIS verification",
+        "city": "Beer Sheva",
+        "country": "Israel"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [34.75, 31.22],
+            [34.84, 31.22],
+            [34.84, 31.28],
+            [34.75, 31.28],
+            [34.75, 31.22]
+          ]
+        ]
+      }
+    }
+  ]
+}
+EOF

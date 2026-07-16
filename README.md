@@ -2,58 +2,43 @@
 
 Welcome to the production deployment repository for the ASTERRA DevOps engineering evaluation. This system sets up a completely automated Cloud Ingestion and Application Delivery framework optimized to run inside the AWS Free Tier.
 
+## 🔒 Security & Credentials Management (Production Grade)
+This repository adheres to the **"Zero Secrets in Git"** policy.
+* **Sensitive Variables:** All sensitive data (`rdp_password`, `wp_db_password`) are defined as `sensitive = true` in Terraform with no hardcoded defaults.
+* **Dynamic Generation:** Credentials are generated cryptographically in-memory during the execution of `deploy.sh` using `openssl`.
+* **Runtime Injection:** Secrets are injected directly into the Terraform runtime via `-var` flags, ensuring they are never written to disk, stored in configuration files, or committed to source control.
+
 ---
 
 ## 🏗️ System Architecture
 
 ```mermaid
 graph TD
-    %% Nodes Definition inside Subgraphs
     subgraph AWS_Cloud ["☁️ AWS Cloud (us-east-1)"]
         IGW["🌐 Internet Gateway"]
-        
         subgraph VPC_Env ["🛡️ VPC (10.0.0.0/16)"]
             subgraph Public_Subnets ["🔓 Public Subnets"]
-                WP["📝 WordPress Server A.1"]
-                NAT["🔌 NAT Gateway"]
+                WP["📝 WordPress Server"]
+                PW["🖥️ Private Workspace (RDP)"]
             end
-            
             subgraph Private_Subnets ["🔒 Private Subnets"]
-                PW["🖥️ Private Workspace A.2"]
                 SaaS["⚙️ SaaS Ingestion Engine"]
-                RDS[("🐘 RDS PostgreSQL + PostGIS")]
+                RDS[("🐘 RDS PostgreSQL")]
             end
         end
-
-        S3_Pub["🪣 S3 Public Bucket"]
-        S3_Priv["🪣 S3 Ingestion Bucket"]
     end
 
-    %% External User Traffic
-    USR(["Incoming Traffic"])
-
-    %% Flow Connections
-    USR --> IGW
+    USR(["Incoming Traffic"]) --> IGW
     IGW --> WP
-    WP --> S3_Pub
-    
-    %% Outbound Private Traffic via NAT (The Correct DevOps Flow)
-    PW --> NAT
-    NAT --> IGW
-    
-    %% Ingestion & DB Flow
-    S3_Priv --> SaaS
+    IGW -.-> PW
     SaaS --> RDS
-    PW -.-> RDS
 ```
 
 ### 🧱 Core Components
 
-1. **Network Layer (VPC):** Spans two Availability Zones. Public subnets host incoming web requests, while private subnets isolate core compute and the stateful database layer.
-2. **PaaS Component (A.1):** A public WordPress server deployed via Docker-Compose on Amazon Linux 2023, open on standard port 80.
-3. **Private Workspace (A.2):** An isolated EC2 instance configured with a desktop environment (XFCE) and XRDP for secure spatial vector data validation using local `GDAL` and `GeoPandas` tools.
-4. **SaaS Core Application:** A background daemon packaged as a Docker container. It continuously polls an isolated private S3 Ingestion Bucket, validates incoming `.geojson` files, and streams spatial vector entries directly into PostgreSQL via native `PostGIS` functions (`ST_GeomFromGeoJSON`).
-
+* **Public WordPress (PaaS):** Standardized web delivery on Amazon Linux 2023.
+* **Private GIS Workspace:** Secure Ubuntu 22.04 environment with XFCE and XRDP for spatial analysis. Accessible via RDP restricted by dynamic IP filtering.
+* **SaaS Ingestion Engine:** Automated containerized pipeline using PostGIS for spatial data integrity.
 ---
 
 ## 🛠️ Tech Stack & Ecosystem
@@ -88,6 +73,7 @@ Follow these exact steps to launch, test, and destroy the environment.
    ```
 
 **What happens here?** The script auto-boots a dedicated S3 state-backend bucket, initialises Terraform, spins up the entire AWS topology, and uploads the project half-pager.md directly onto the public delivery asset block.
+Important: Upon successful completion, the script will output the dynamically generated RDP credentials in your console. Copy these credentials immediately to access your GIS workspace.
 
 ### Phase 2: Wire up the CI/CD Pipeline
 
@@ -149,3 +135,13 @@ cd scripts
 ```
    
 > ⚠️ **Warning:** This forces immediate cascading removal of all buckets, databases, computing instances, networks, and secrets.
+
+
+## 📸 Project Verification
+Here is the proof of the system's operational status and CI/CD validation.
+
+| Component | Screenshot | Description |
+| :--- | :--- | :--- |
+| **Public PaaS** | ![WordPress](docs/screenshots/wordpress_live.png) | Landing page of the Public WordPress instance |
+| **GIS Workspace** | ![GIS](docs/screenshots/gis_verification.png) | Successful RDP session & Geopandas validation |
+| **CI/CD Pipeline** | ![CI/CD](docs/screenshots/github_actions_success.png) | GitHub Actions workflow success status |

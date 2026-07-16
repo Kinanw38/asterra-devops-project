@@ -9,6 +9,17 @@ echo "========================================================="
 echo "🚀 INITIATING AUTOMATED DEPLOYMENT PROTOCOL IN REGION: $REGION"
 echo "========================================================="
 
+# יצירת סיסמאות רנדומליות בזיכרון (לא נשמרות בקבצים!)
+GENERATED_RDP_PASS=$(openssl rand -base64 12 | tr -d '/+=')
+GENERATED_WP_PASS=$(openssl rand -base64 12 | tr -d '/+=')
+RDP_USER="asterra_dev"
+
+echo "🔑 GENERATED SECRETS FOR THIS DEPLOYMENT:"
+echo "   RDP Username: $RDP_USER"
+echo "   RDP Password: $GENERATED_RDP_PASS"
+echo "   (Make sure to copy these for your RDP connection!)"
+echo "========================================================="
+
 echo "[STEP 1] Validating and initializing remote Terraform State isolated S3 bucket..."
 if ! aws s3api head-bucket --bucket "$IAC_STATE_BUCKET" --region "$REGION" 2>/dev/null; then
     if [ "$REGION" = "us-east-1" ]; then
@@ -18,10 +29,9 @@ if ! aws s3api head-bucket --bucket "$IAC_STATE_BUCKET" --region "$REGION" 2>/de
     fi
 fi
 
-# 🔥 תיקון באג 1: שליפת ה-IP הציבורי הנוכחי שלך והפיכתו ל-CIDR תקין (/32) לטובת ה-RDP המאובטח
 CURRENT_IP=$(curl -s https://checkip.amazonaws.com)
 ALLOWED_RDP="${CURRENT_IP}/32"
-echo "[INFO] Detected current host IP: $ALLOWED_RDP (Injecting to RDP Security Group safely)"
+echo "[INFO] Detected current host IP: $ALLOWED_RDP"
 
 echo "[STEP 2] Launching infrastructure layer deployment utilizing Terraform manifests..."
 cd ../terraform
@@ -31,25 +41,27 @@ terraform init -reconfigure \
     -backend-config="key=prod/terraform.tfstate" \
     -backend-config="region=$REGION"
 
-# 🔥 הזרקת ה-Region, הסביבה ומשתנה ה-RDP כדי למנוע עצירה לבקשת קלט מהמשתמש
+# הזרקת המשתנים החדשים לטרהפורם
 terraform apply \
     -var="aws_region=$REGION" \
     -var="environment=$ENVIRONMENT" \
     -var="allowed_rdp_ip=$ALLOWED_RDP" \
+    -var="rdp_username=$RDP_USER" \
+    -var="rdp_password=$GENERATED_RDP_PASS" \
+    -var="wp_db_password=$GENERATED_WP_PASS" \
     -auto-approve
 
-# 🔥 תיקון באג 2: קריאת שם הבאקט ישירות מה-Output החדש והנקי שיצרנו ב-outputs.tf ללא מניפולציות טקסט מסוכנות
 PUBLIC_DOCS_BUCKET=$(terraform output -raw public_docs_bucket_name 2>/dev/null || terraform output -raw public_docs_bucket_url | sed 's/https:\/\///' | sed 's/\.s3\.amazonaws\.com//')
 
-echo "[STEP 3] Deploying project half-pager overview document directly into the public delivery S3 bucket..."
+echo "[STEP 3] Deploying project half-pager overview document..."
 cd ..
 if [ -f "half-pager.md" ]; then
     aws s3 cp half-pager.md "s3://$PUBLIC_DOCS_BUCKET/half-pager.md" --region "$REGION"
 elif [ -f "README.md" ]; then
-    # מנגנון הגנה: אם שכחת וקראת לקובץ README.md, הוא עדיין יעלה אותו בהצלחה כקובץ התיעוד הנדרש
     aws s3 cp README.md "s3://$PUBLIC_DOCS_BUCKET/half-pager.md" --region "$REGION"
 fi
 
 echo "========================================================="
-echo "🎉 INFRASTRUCTURE AND PLATFORMS DEPLOYED AND SYNCHRONIZED SUCCESSFULLY!"
+echo "🎉 DEPLOYMENT COMPLETE!"
+echo "   RDP ACCESS: Use username '$RDP_USER' and password '$GENERATED_RDP_PASS'"
 echo "========================================================="
