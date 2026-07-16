@@ -147,5 +147,5 @@ To avoid unexpected bills or lingering active resources in your AWS account, run
 cd scripts
 ./destroy.sh us-east-1
 ```
-  
+   
 > ⚠️ **Warning:** This forces immediate cascading removal of all buckets, databases, computing instances, networks, and secrets.
