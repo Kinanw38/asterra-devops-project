@@ -109,18 +109,22 @@ resource "aws_instance" "gis_private" {
   user_data = <<-EOF
               #!/bin/bash
               dnf update -y
-              dnf install -y docker awscli xrdp python3-pip gcc python3-devel
 
-              # התקנת ממשק גרפי (XFCE) ושרת XRDP לעמידה בדרישת ה-RDP לתחנת העבודה
+              # 1. התקנת מוצרי הליבה הקריטיים קודם כל (אם משהו כאן נכשל, השרת לא שמיש)
+              dnf install -y docker awscli python3-pip gcc python3-devel
+
+              # 2. ניסיונות התקנה מבודדים עבור ה-GUI וה-XRDP (ההגנה מונעת קריסה אם חבילות חסרות ב-AL2023)
               dnf groupinstall -y "Xfce" || true
-              systemctl start xrdp
-              systemctl enable xrdp
-              echo "asterra_dev:SecurePass2026!" | chpasswd
+              dnf install -y xrdp || true
+              systemctl start xrdp || true
+              systemctl enable xrdp || true
+              echo "asterra_dev:SecurePass2026!" | chpasswd || true
 
-              # התקנת חבילות פיתוח מקומיות (GDAL & GeoPandas) על המכונה עבור השרת הפרטי
+              # 3. ניסיון התקנה מבודד של חבילות ה-GIS (ספריות מקומיות בשרת המארח)
               dnf install -y gdal gdal-devel || true
-              pip3 install geopandas shapely psycopg2-binary
+              pip3 install geopandas shapely psycopg2-binary || true
 
+              # 4. הפעלת מנוע ה-Docker (ההתקנה שלו הובטחה בשלב 1)
               systemctl start docker
               systemctl enable docker
 
